@@ -5,7 +5,7 @@ import networkx as nx
 from plotly import graph_objs as go
 from sklearn.manifold import TSNE
 
-def runAndExtract(model, layerNums, display = False, *model_inputs):
+def runAndExtract(model, layerNums, *model_inputs):
 
     hidden_vectors = []
     def extractHidden(self, input, output):
@@ -35,19 +35,21 @@ def tsne_reduce(data, params):
     new_values = tsne_model.fit_transform(tokens)
     return new_values
 
-def generateGraph(edges, nodes, scores, labelled_nodes, hidden, tsne_params = {"perplexity": 25, "n_components": 2, "init": "pca", "n_iter": 2500, "random_state": 25}):
+def generateGraph(edges, nodes, embeddings, scores = None, labelled_nodes = None, tsne_params = {"perplexity": 25, "n_components": 2, "init": "pca", "n_iter": 2500, "random_state": 25}):
     G=nx.Graph()
     print("==== Performing Dimensionality Reduction ===")
-    tsne_pos = tsne_reduce(hidden, tsne_params)
+    tsne_pos = tsne_reduce(embeddings, tsne_params)
     tsne_pos_dict = {}
-    labelled_idx_names = [nodes[x] for x in labelled_nodes]
+    labelled_idx_names = []
+    if(labelled_nodes):
+        labelled_idx_names = [nodes[x] for x in labelled_nodes]
     #edges = edges.to_dense().numpy()
     # =============init nodes
     x = 0
     y = 0
     nd_cnt = 0
     print("Initializing Nodes")
-    for i in range(len(scores)): # loop through all the nodes
+    for i in range(len(nodes)): # loop through all the nodes
         #print(nd_cnt/len(scores))
         nd_cnt += 1
         nd_name = "NA" #idx_map2.get(i,"NA")
@@ -56,11 +58,17 @@ def generateGraph(edges, nodes, scores, labelled_nodes, hidden, tsne_params = {"
             nd_name = nodes[i]
         else:
             print("WARNING: couldn't find node with index: " + str(i))
-        G.add_node(
-            nd_name,
-            pos=(x,y),
-            label=nd_name,
-            score=scores[i])
+        if(scores):
+            G.add_node(
+                nd_name,
+                pos=(x,y),
+                label=nd_name,
+                score=scores[i])
+        else:
+            G.add_node(
+                nd_name,
+                pos=(x,y),
+                label=nd_name)
         tsne_pos_dict[nd_name] = tsne_pos[i]
         if x == y:
             y += 1
@@ -76,8 +84,7 @@ def generateGraph(edges, nodes, scores, labelled_nodes, hidden, tsne_params = {"
         nd_name1 = nodes.get(int(edge[0]),"NA")
         nd_name2 = nodes.get(int(edge[1]),"NA")
         if(nd_name1 == "NA" or nd_name2 == "NA"):
-            print("WARNING: edge has no name in index map")
-            print(edge)
+            print("WARNING: edge has no name in index map: ", edge)
         G.add_edge(nd_name1,nd_name2,weight=0) # weight = 0 cause edges have no weight
 
 
@@ -132,24 +139,24 @@ def generateGraph(edges, nodes, scores, labelled_nodes, hidden, tsne_params = {"
             ),
             line=dict(width=2, color=[])))
 
-    print("0")
 
     for node in G.nodes():
-        print(node)
         if(G.node[node] == {}):
             print("WARNING: couldn't find node ", node)
             continue
         x, y = graph_layout[G.node[node]['label']]
         node_trace['x'] += tuple([x])
         node_trace['y'] += tuple([y])
-        node_trace['text'] += tuple([str(G.nodes[node]["label"]) + "<br>" + str(G.nodes[node]["score"])])
-        node_trace['marker']['color'] += tuple(G.nodes[node]["score"].tolist())
+        if(scores):
+            node_trace['text'] += tuple([str(G.nodes[node]["label"]) + "<br>" + str(G.nodes[node]["score"])])
+            node_trace['marker']['color'] += tuple(G.nodes[node]["score"].tolist())
+        else:
+            node_trace['text'] += tuple([str(G.nodes[node]["label"])])
+
         if(node in labelled_idx_names):
             node_trace['marker']['line']['color'] += tuple(["LightGreen"])
         else:
             node_trace['marker']['line']['color'] += tuple(["Black"])
-
-    print("1")
 
     edge_trace = go.Scatter(
         x=[],
@@ -171,8 +178,6 @@ def generateGraph(edges, nodes, scores, labelled_nodes, hidden, tsne_params = {"
         edge_trace['y'] += tuple([y0, y1, None])
         edge_trace['text'] += tuple([G.get_edge_data(edge[0],edge[1])["weight"]])
 
-    print("2")
-
     fig = go.Figure(data=[edge_trace, node_trace],
                  layout=go.Layout(
                     title='<br>Graph',
@@ -182,5 +187,4 @@ def generateGraph(edges, nodes, scores, labelled_nodes, hidden, tsne_params = {"
                     margin=dict(b=20,l=5,r=5,t=40),
                     xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
                     yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)))
-    print("3")
     return fig
