@@ -4,8 +4,11 @@ A toolkit for extracting and visualizing the hidden layer feature vectors of gra
 # How to use
 
 runAndExtract(model, layerNums, *model_inputs): Will do forward propagation as well as return the feature vectors right after the forward call for all layers in layerNums (in the order that you specify them in the array). This function essentially replaces the normal forward call such as out = model(input). 
+
 model: the Pytorch model
+
 layerNums: the layers you want to extract the feature vectors from (the layer id corresponds to the declaration order in the module, see example below)
+
 *model_inputs: can take in an arbitrary amount of inputs for your model.
 
 Example:
