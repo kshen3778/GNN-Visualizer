@@ -46,6 +46,9 @@ output, h_feat = runAndExtract(model, [0, 1], features, adj) #This line replaces
 # ... etc ...   
 ```
 
+----------------------------------------
+
+
 ```
 generateGraph(edges, nodes, embeddings, scores = None, labelled_nodes = None, tsne_params = {"perplexity": 25, "n_components": 2, "init": "pca", "n_iter": 2500, "random_state": 25}):
 ```
